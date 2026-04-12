@@ -487,20 +487,20 @@ export default function App() {
         </div>
 
         <nav className="sidebar-nav">
-          <a
-            href="#"
-            className={view === 'issues' ? 'active' : ''}
-            onClick={e => { e.preventDefault(); goIssues(); setSelectedCategory(null); setSelectedType(null); }}
+          <button
+            className={`${view === 'issues' ? 'active' : ''}`}
+            onClick={() => { goIssues(); setSelectedCategory(null); setSelectedType(null); }}
+            style={{ appearance: 'none', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', fontSize: 13, color: view === 'issues' ? '#fff' : '#64748b', textDecoration: 'none', borderRadius: 8, transition: 'all .15s', fontWeight: 500, cursor: 'pointer', width: '100%', textAlign: 'left' }}
           >
             📋 Issue Explorer
-          </a>
-          <a
-            href="#"
-            className={view === 'metrics' ? 'active' : ''}
-            onClick={e => { e.preventDefault(); goMetrics(); setSelectedCategory(null); setSelectedType(null); }}
+          </button>
+          <button
+            className={`${view === 'metrics' ? 'active' : ''}`}
+            onClick={() => { goMetrics(); setSelectedCategory(null); setSelectedType(null); }}
+            style={{ appearance: 'none', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', fontSize: 13, color: view === 'metrics' ? '#fff' : '#64748b', textDecoration: 'none', borderRadius: 8, transition: 'all .15s', fontWeight: 500, cursor: 'pointer', width: '100%', textAlign: 'left' }}
           >
             📊 Analytics
-          </a>
+          </button>
         </nav>
 
         <hr className="sidebar-sep" />
