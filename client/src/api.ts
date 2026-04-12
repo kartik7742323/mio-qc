@@ -40,10 +40,6 @@ export const api = {
   async getClients(): Promise<string[]> {
     const r = await fetch(`${BASE}/clients`, { headers: getAuthHeader() });
     const json = await r.json();
-    if (json.data) {
-      const decrypted = await decryptResponse(json.data);
-      return decrypted.clients || [];
-    }
     return json.clients || [];
   },
 
@@ -53,10 +49,6 @@ export const api = {
       : `${BASE}/categories`;
     const r = await fetch(url, { headers: getAuthHeader() });
     const json = await r.json();
-    if (json.data && typeof json.data === 'object' && json.data.iv) {
-      const decrypted = await decryptResponse(json.data);
-      return decrypted.data || [];
-    }
     return json.data || [];
   },
 
@@ -65,10 +57,6 @@ export const api = {
     if (client) url += `&client=${encodeURIComponent(client)}`;
     const r = await fetch(url, { headers: getAuthHeader() });
     const json = await r.json();
-    if (json.data && typeof json.data === 'object' && json.data.iv) {
-      const decrypted = await decryptResponse(json.data);
-      return decrypted.data || [];
-    }
     return json.data || [];
   },
 

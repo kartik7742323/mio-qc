@@ -85,7 +85,7 @@ initializeServer();
 app.get('/api/clients', requireAuth, async (req, res) => {
   try {
     const clients = await sheetsService.getAllClients();
-    res.json({ success: true, data: encrypt({ clients }) });
+    res.json({ success: true, clients });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -106,7 +106,7 @@ app.get('/api/categories', requireAuth, async (req, res) => {
         resolvedCount: c.resolvedCount - (c.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.resolvedCount, 0) || 0),
         types: c.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
       }));
-    res.json({ success: true, data: encrypt({ data }) });
+    res.json({ success: true, data });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
@@ -221,7 +221,7 @@ app.get('/api/metrics', requireAuth, async (req, res) => {
 
     res.json({
       success: true,
-      data: encrypt({
+      data: {
         summary: {
           totalQcDone,
           totalOccurrences,
@@ -250,7 +250,7 @@ app.get('/api/metrics', requireAuth, async (req, res) => {
         clientBreakdown: Object.values(clientMap).sort((a, b) => b.count - a.count),
         zeroResolution,
         crossClient,
-      }),
+      },
     });
   } catch (error) {
     console.error(error);

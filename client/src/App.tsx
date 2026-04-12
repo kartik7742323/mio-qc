@@ -3,7 +3,6 @@ import './App.css';
 import { api, CategoryStat, TypeStat, CallRow } from './api';
 import Metrics from './Metrics';
 import LoginPage from './LoginPage';
-import { decryptResponse } from './crypto';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -458,12 +457,8 @@ export default function App() {
         api.getCategories(clientFilter || undefined),
         fetch(`/api/metrics${qs}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
       ]);
-      let metricsData = metricsRes.data;
-      if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
-        metricsData = await decryptResponse(metricsData);
-      }
       setCategories(cats);
-      setMetrics(metricsData);
+      setMetrics(metricsRes.data);
       setLoading(false);
     } catch (err) {
       console.error('Error loading data:', err);

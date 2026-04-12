@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { decryptResponse } from './crypto';
 
 interface MetricsData {
   summary: {
@@ -121,46 +120,12 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       fetch(`/api/categories${qs}`, { headers: authHeader }).then(r => r.json()),
     ]).then(async ([metrics, cats]) => {
       try {
-        console.log('Metrics response:', metrics);
-        console.log('Categories response:', cats);
-
-        let metricsData = metrics.data;
-        let catsData = cats.data;
-
-        // Decrypt if encrypted
-        if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
-          console.log('Decrypting metrics...');
-          metricsData = await decryptResponse(metricsData);
-        }
-        if (catsData && typeof catsData === 'object' && catsData.iv) {
-          console.log('Decrypting categories...');
-          catsData = await decryptResponse(catsData);
-        }
-
-        console.log('Decrypted metrics data:', metricsData);
-        console.log('Decrypted categories:', catsData);
-
-        // Handle metrics data - it's already the full object after decryption
-        if (metricsData && metricsData.summary) {
-          setData(metricsData);
-        } else {
-          console.warn('Unexpected metrics data structure:', metricsData);
-          setError('Invalid data format received');
-        }
-
-        // Handle categories data - could be array or wrapped
-        if (Array.isArray(catsData)) {
-          setCategories(catsData);
-        } else if (catsData && Array.isArray(catsData.data)) {
-          setCategories(catsData.data);
-        } else {
-          console.warn('Unexpected categories data structure:', catsData);
-          setCategories([]);
-        }
+        setData(metrics.data);
+        setCategories(Array.isArray(cats.data) ? cats.data : []);
         setLoading(false);
-      } catch (decryptErr) {
-        console.error('Decryption error:', decryptErr);
-        setError('Failed to decrypt data. Please try refreshing.');
+      } catch (err) {
+        console.error('Error processing data:', err);
+        setError('Failed to process analytics data.');
         setLoading(false);
       }
     }).catch(err => {
