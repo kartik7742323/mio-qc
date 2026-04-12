@@ -59,6 +59,8 @@ function CategoryTable({ categories, loading, onSelect }: {
     return <div className="loader"><div className="spinner" />Loading data from Google Sheets…</div>;
   }
 
+  const totalIssues = categories.reduce((s, c) => s + c.count, 0);
+
   if (!categories.length) return (
     <div>
       <div className="empty">No data found for the selected filters.</div>
