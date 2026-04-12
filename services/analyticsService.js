@@ -15,6 +15,27 @@ class AnalyticsService {
   }
 
   /**
+   * Get total count of unique calls QC'd (including all issues: user, agent, system, voicemail)
+   */
+  async getTotalCallsQced(clientFilter = null) {
+    const clients = clientFilter
+      ? [clientFilter]
+      : await sheetsService.getAllClients();
+
+    const uniqueExecutionIds = new Set();
+
+    for (const client of clients) {
+      const rows = await sheetsService.getClientData(client);
+      rows.forEach(row => {
+        // Count ANY call that has ANY category or type (not empty both)
+        uniqueExecutionIds.add(row.executionId);
+      });
+    }
+
+    return uniqueExecutionIds.size;
+  }
+
+  /**
    * Get aggregated data grouped by CATEGORY (highest level).
    * Each category has a count of total issues, open, resolved,
    * and a breakdown of issue types underneath.

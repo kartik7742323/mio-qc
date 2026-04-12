@@ -106,6 +106,9 @@ app.get('/api/metrics', async (req, res) => {
     const { client } = req.query;
     const allCats = await analyticsService.getCategoryBreakdown(client || null);
 
+    // Total QC done = unique count of calls QC'd (includes user issues, voicemail, everything)
+    const totalQcDone = await analyticsService.getTotalCallsQced(client || null);
+
     // Separate main categories from excluded ones
     const cats = allCats.filter(c => !EXCLUDED_FROM_METRICS.includes(c.category));
     const excludedCats = allCats.filter(c => EXCLUDED_FROM_METRICS.includes(c.category));
@@ -118,9 +121,6 @@ app.get('/api/metrics', async (req, res) => {
       resolvedCount: cat.resolvedCount - (cat.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.resolvedCount, 0) || 0),
       types: cat.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
     }));
-
-    // Total QC done = all calls with ANY category/type (includes user issues, voicemail, everything)
-    const totalQcDone = allCats.reduce((s, c) => s + c.count, 0);
 
     // Main metrics (excluding non-agent issues from totals)
     const totalOccurrences = catsWithoutExcludedTypes.reduce((s, c) => s + c.count, 0);
