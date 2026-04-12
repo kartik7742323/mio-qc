@@ -1,5 +1,10 @@
 const BASE = '/api';
 
+function getAuthHeader() {
+  const token = sessionStorage.getItem('mio_auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 export interface TypeStat {
   type: string;
   count: number;
@@ -30,7 +35,7 @@ export interface CallRow {
 
 export const api = {
   async getClients(): Promise<string[]> {
-    const r = await fetch(`${BASE}/clients`);
+    const r = await fetch(`${BASE}/clients`, { headers: getAuthHeader() });
     return (await r.json()).clients || [];
   },
 
@@ -38,14 +43,14 @@ export const api = {
     const url = client
       ? `${BASE}/categories?client=${encodeURIComponent(client)}`
       : `${BASE}/categories`;
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: getAuthHeader() });
     return (await r.json()).data || [];
   },
 
   async getCalls(category: string, type: string, client?: string): Promise<CallRow[]> {
     let url = `${BASE}/calls?category=${encodeURIComponent(category)}&type=${encodeURIComponent(type)}`;
     if (client) url += `&client=${encodeURIComponent(client)}`;
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: getAuthHeader() });
     return (await r.json()).data || [];
   },
 
@@ -55,7 +60,7 @@ export const api = {
   ): Promise<void> {
     await fetch(`${BASE}/issue-status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: JSON.stringify({ executionId, client, category, type, status }),
     });
   },

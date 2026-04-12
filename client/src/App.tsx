@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { api, CategoryStat, TypeStat, CallRow } from './api';
 import Metrics from './Metrics';
+import LoginPage from './LoginPage';
+import { decryptResponse } from './crypto';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -423,6 +425,11 @@ function CallsTable({ category, issueType, clientFilter, onBack, onBackAll }: {
 // ── Root App ──────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const token = sessionStorage.getItem('mio_auth_token') || '';
+
+  // Check auth - show login if no token
+  if (!token) return <LoginPage />;
+
   const [clients, setClients]         = useState<string[]>([]);
   const [clientFilter, setClientFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -434,7 +441,18 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryStat | null>(null);
   const [selectedType, setSelectedType]         = useState<TypeStat | null>(null);
 
-  useEffect(() => { api.getClients().then(setClients); }, []);
+  const authHeader = { 'Authorization': `Bearer ${token}` };
+
+  const handleApiError = (err: any) => {
+    if (err.status === 401) {
+      sessionStorage.removeItem('mio_auth_token');
+      window.location.reload();
+    }
+  };
+
+  useEffect(() => {
+    api.getClients().then(setClients).catch(handleApiError);
+  }, []);
 
   const loadCategories = useCallback(() => {
     setLoading(true);

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const databaseService = require('./services/databaseService');
 const sheetsService = require('./services/sheetsService');
 const analyticsService = require('./services/analyticsService');
@@ -8,11 +9,66 @@ const analyticsService = require('./services/analyticsService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Auth constants
+const AUTH_SECRET = 'MioAuth!Secret#2024@Meritto';
+const ENC_KEY = Buffer.from('MioAdoption$Analytics#Key2024!XZ');
+const USERNAME = 'product@meritto.com';
+const PASSWORD = '1!2MIC#@!S5G3F>>__!@';
+
+// Auth functions
+function createToken() {
+  const ts = Date.now().toString(16);
+  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(ts).digest('hex');
+  return `${ts}.${sig}`;
+}
+
+function verifyToken(token) {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [ts, sig] = parts;
+  try {
+    const expected = crypto.createHmac('sha256', AUTH_SECRET).update(ts).digest('hex');
+    const sigBuf = Buffer.from(sig, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length) return false;
+    if (!crypto.timingSafeEqual(sigBuf, expBuf)) return false;
+    const age = Date.now() - parseInt(ts, 16);
+    return age >= 0 && age < 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+function encrypt(obj) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  const enc = Buffer.concat([cipher.update(JSON.stringify(obj), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return { iv: iv.toString('hex'), tag: tag.toString('hex'), data: enc.toString('hex') };
+}
+
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!verifyToken(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  next();
+}
+
 app.use(cors());
 app.use(express.json());
 
 const buildPath = path.join(__dirname, 'client/build');
 app.use(express.static(buildPath));
+
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (username !== USERNAME || password !== PASSWORD) {
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
+  }
+  res.json({ success: true, token: createToken() });
+});
 
 async function initializeServer() {
   try {
@@ -26,17 +82,17 @@ async function initializeServer() {
 initializeServer();
 
 // Get all clients
-app.get('/api/clients', async (req, res) => {
+app.get('/api/clients', requireAuth, async (req, res) => {
   try {
     const clients = await sheetsService.getAllClients();
-    res.json({ success: true, clients });
+    res.json({ success: true, data: encrypt({ clients }) });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // GET /api/categories?client=X  → category-level breakdown
-app.get('/api/categories', async (req, res) => {
+app.get('/api/categories', requireAuth, async (req, res) => {
   try {
     const { client } = req.query;
     const allData = await analyticsService.getCategoryBreakdown(client || null);
@@ -50,7 +106,7 @@ app.get('/api/categories', async (req, res) => {
         resolvedCount: c.resolvedCount - (c.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.resolvedCount, 0) || 0),
         types: c.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
       }));
-    res.json({ success: true, data });
+    res.json({ success: true, data: encrypt({ data }) });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
@@ -101,7 +157,7 @@ const EXCLUDED_FROM_METRICS = ['User_Behaviour'];
 const EXCLUDED_TYPES = ['Voicemail Detected'];
 
 // GET /api/metrics?client=X  → full analytics for the metrics page
-app.get('/api/metrics', async (req, res) => {
+app.get('/api/metrics', requireAuth, async (req, res) => {
   try {
     const { client } = req.query;
     const allCats = await analyticsService.getCategoryBreakdown(client || null);
@@ -165,7 +221,7 @@ app.get('/api/metrics', async (req, res) => {
 
     res.json({
       success: true,
-      data: {
+      data: encrypt({
         summary: {
           totalQcDone,
           totalOccurrences,
@@ -194,7 +250,7 @@ app.get('/api/metrics', async (req, res) => {
         clientBreakdown: Object.values(clientMap).sort((a, b) => b.count - a.count),
         zeroResolution,
         crossClient,
-      },
+      }),
     });
   } catch (error) {
     console.error(error);
