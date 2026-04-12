@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 interface MetricsData {
   summary: {
+    totalQcDone: number;
     totalOccurrences: number;
     totalOpen: number;
     totalResolved: number;
@@ -147,12 +148,12 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
 
       {/* ── 4 KPI Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        <KpiCard label="Total Issues" value={summary.totalOccurrences} sub="occurrences logged" />
+        <KpiCard label="Total QC Done" value={summary.totalQcDone} sub="all calls reviewed" />
         <KpiCard
-          label="Open"
-          value={summary.totalOpen}
+          label="Agent Issues Found"
+          value={summary.totalOccurrences}
           color="#ef4444"
-          sub="unresolved"
+          sub="excluding user/system"
         />
         <KpiCard
           label="Resolved"
@@ -164,7 +165,7 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
           label="Resolution Rate"
           value={`${summary.resolutionRate}%`}
           color={summary.resolutionRate > 50 ? '#10b981' : '#ef4444'}
-          sub="of all issues"
+          sub="of agent issues"
         />
       </div>
 

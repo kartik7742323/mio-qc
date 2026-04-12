@@ -119,6 +119,10 @@ app.get('/api/metrics', async (req, res) => {
       types: cat.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
     }));
 
+    // Total QC done = all calls with ANY category/type (includes user issues, voicemail, everything)
+    const totalQcDone = allCats.reduce((s, c) => s + c.count, 0);
+
+    // Main metrics (excluding non-agent issues from totals)
     const totalOccurrences = catsWithoutExcludedTypes.reduce((s, c) => s + c.count, 0);
     const totalOpen = catsWithoutExcludedTypes.reduce((s, c) => s + c.openCount, 0);
     const totalResolved = catsWithoutExcludedTypes.reduce((s, c) => s + c.resolvedCount, 0);
@@ -163,6 +167,7 @@ app.get('/api/metrics', async (req, res) => {
       success: true,
       data: {
         summary: {
+          totalQcDone,
           totalOccurrences,
           totalOpen,
           totalResolved,
