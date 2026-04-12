@@ -39,7 +39,9 @@ app.get('/api/clients', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   try {
     const { client } = req.query;
-    const data = await analyticsService.getCategoryBreakdown(client || null);
+    const allData = await analyticsService.getCategoryBreakdown(client || null);
+    // Filter out excluded categories for the main view
+    const data = allData.filter(c => !EXCLUDED_FROM_METRICS.includes(c.category));
     res.json({ success: true, data });
   } catch (error) {
     console.error(error);
@@ -80,11 +82,18 @@ app.post('/api/issue-status', async (req, res) => {
   }
 });
 
+// Categories to exclude from main metrics (less prominent)
+const EXCLUDED_FROM_METRICS = ['User_Behaviour', 'System_Detection'];
+
 // GET /api/metrics?client=X  → full analytics for the metrics page
 app.get('/api/metrics', async (req, res) => {
   try {
     const { client } = req.query;
-    const cats = await analyticsService.getCategoryBreakdown(client || null);
+    const allCats = await analyticsService.getCategoryBreakdown(client || null);
+
+    // Separate main categories from excluded ones
+    const cats = allCats.filter(c => !EXCLUDED_FROM_METRICS.includes(c.category));
+    const excludedCats = allCats.filter(c => EXCLUDED_FROM_METRICS.includes(c.category));
 
     const totalOccurrences = cats.reduce((s, c) => s + c.count, 0);
     const totalOpen = cats.reduce((s, c) => s + c.openCount, 0);
@@ -143,6 +152,12 @@ app.get('/api/metrics', async (req, res) => {
           openCount: c.openCount,
           resolvedCount: c.resolvedCount,
           pct: Math.round((c.count / totalOccurrences) * 100),
+        })),
+        excludedCategoryBreakdown: excludedCats.map(c => ({
+          category: c.category,
+          count: c.count,
+          openCount: c.openCount,
+          resolvedCount: c.resolvedCount,
         })),
         top10Types,
         clientBreakdown: Object.values(clientMap).sort((a, b) => b.count - a.count),

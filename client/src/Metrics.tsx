@@ -13,6 +13,10 @@ interface MetricsData {
     category: string; count: number;
     openCount: number; resolvedCount: number; pct: number;
   }>;
+  excludedCategoryBreakdown: Array<{
+    category: string; count: number;
+    openCount: number; resolvedCount: number;
+  }>;
   top10Types: Array<{
     type: string; category: string;
     count: number; openCount: number; resolvedCount: number; clients: string[];
@@ -378,6 +382,48 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
           );
         })}
       </div>
+
+      {/* ── Other Categories (Not Agent Issues) ── */}
+      {data.excludedCategoryBreakdown && data.excludedCategoryBreakdown.length > 0 && (
+        <div>
+          <div style={{
+            fontSize: 13, fontWeight: 700, color: '#94a3b8',
+            margin: '40px 0 12px', paddingBottom: 8,
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span>📝 Other (Non-Agent Issues)</span>
+            <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 500 }}>Not tracked in main metrics</span>
+          </div>
+          <div style={{
+            background: '#f8f9fb', borderRadius: 12, border: '1px solid #e2e8f0',
+            overflow: 'hidden', boxShadow: 'none',
+          }}>
+            {data.excludedCategoryBreakdown.map((cat, i) => {
+              const resRate = cat.count > 0 ? Math.round((cat.resolvedCount / cat.count) * 100) : 0;
+              return (
+                <div key={cat.category} style={{
+                  display: 'flex', alignItems: 'center', gap: 16, padding: '11px 16px',
+                  borderBottom: i < data.excludedCategoryBreakdown.length - 1 ? '1px solid #e8eaed' : 'none',
+                  background: i % 2 === 0 ? '#f8f9fb' : '#ffffff',
+                }}>
+                  <div style={{ width: 160, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+                      {cat.category.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 20, flexShrink: 0, fontSize: 12 }}>
+                    <span style={{ color: '#94a3b8' }}>{cat.count} occurrences</span>
+                    <span style={{ color: '#ef4444', fontWeight: 600 }}>{cat.openCount} open</span>
+                    <span style={{ color: '#10b981', fontWeight: 600 }}>{cat.resolvedCount} resolved</span>
+                    <span style={{ color: '#94a3b8' }}>{resRate}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ height: 32 }} />
     </div>

@@ -46,6 +46,7 @@ function StatCard({ label, value, sub, variant }: {
 }
 
 const EXCLUDE_CLIENTS = ['Master data ', 'Clients ', 'Report '];
+const EXCLUDED_FROM_METRICS = ['User_Behaviour', 'System_Detection'];
 
 // ── Category Overview ─────────────────────────────────────────────────────────
 
@@ -464,6 +465,8 @@ export default function App() {
   }, [clientFilter]);
 
   const filteredCats = categories.filter(cat => {
+    // Exclude non-agent issue categories from main view
+    if (EXCLUDED_FROM_METRICS.includes(cat.category)) return false;
     if (statusFilter === 'open'     && cat.openCount === 0)     return false;
     if (statusFilter === 'resolved' && cat.resolvedCount === 0) return false;
     if (search && !cat.category.toLowerCase().includes(search.toLowerCase())) return false;
