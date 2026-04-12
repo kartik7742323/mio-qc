@@ -140,8 +140,23 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
         console.log('Decrypted metrics data:', metricsData);
         console.log('Decrypted categories:', catsData);
 
-        setData(metricsData);
-        setCategories(catsData || []);
+        // Handle metrics data - it's already the full object after decryption
+        if (metricsData && metricsData.summary) {
+          setData(metricsData);
+        } else {
+          console.warn('Unexpected metrics data structure:', metricsData);
+          setError('Invalid data format received');
+        }
+
+        // Handle categories data - could be array or wrapped
+        if (Array.isArray(catsData)) {
+          setCategories(catsData);
+        } else if (catsData && Array.isArray(catsData.data)) {
+          setCategories(catsData.data);
+        } else {
+          console.warn('Unexpected categories data structure:', catsData);
+          setCategories([]);
+        }
         setLoading(false);
       } catch (decryptErr) {
         console.error('Decryption error:', decryptErr);
