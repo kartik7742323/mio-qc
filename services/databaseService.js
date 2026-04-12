@@ -1,21 +1,37 @@
-const sqlite3 = require('sqlite3').verbose();
+let sqlite3;
+try {
+  sqlite3 = require('sqlite3').verbose();
+} catch (e) {
+  sqlite3 = null;
+}
+
 const path = require('path');
 const config = require('../config');
 
 class DatabaseService {
   constructor() {
     this.db = null;
+    this.available = false;
   }
 
   async init() {
+    // On Vercel, sqlite3 native module fails. Gracefully skip.
+    if (!sqlite3) {
+      console.log('⚠️  SQLite3 not available (serverless environment) — status tracking disabled');
+      this.available = false;
+      return Promise.resolve();
+    }
+
     return new Promise((resolve, reject) => {
       this.db = new sqlite3.Database(config.DB_PATH, (err) => {
         if (err) {
-          reject(err);
+          console.warn('⚠️  Database initialization failed:', err.message);
+          this.available = false;
+          resolve(); // Don't fail the whole app
         } else {
           this.createTables()
-            .then(() => resolve())
-            .catch(reject);
+            .then(() => { this.available = true; resolve(); })
+            .catch(err => { console.warn('⚠️  Table creation failed:', err); resolve(); });
         }
       });
     });
