@@ -1,3 +1,5 @@
+import { decryptResponse } from './crypto';
+
 const BASE = '/api';
 
 function getAuthHeader(): any {
@@ -37,7 +39,12 @@ export interface CallRow {
 export const api = {
   async getClients(): Promise<string[]> {
     const r = await fetch(`${BASE}/clients`, { headers: getAuthHeader() });
-    return (await r.json()).clients || [];
+    const json = await r.json();
+    if (json.data) {
+      const decrypted = await decryptResponse(json.data);
+      return decrypted.clients || [];
+    }
+    return json.clients || [];
   },
 
   async getCategories(client?: string): Promise<CategoryStat[]> {
@@ -45,14 +52,24 @@ export const api = {
       ? `${BASE}/categories?client=${encodeURIComponent(client)}`
       : `${BASE}/categories`;
     const r = await fetch(url, { headers: getAuthHeader() });
-    return (await r.json()).data || [];
+    const json = await r.json();
+    if (json.data && typeof json.data === 'object' && json.data.iv) {
+      const decrypted = await decryptResponse(json.data);
+      return decrypted.data || [];
+    }
+    return json.data || [];
   },
 
   async getCalls(category: string, type: string, client?: string): Promise<CallRow[]> {
     let url = `${BASE}/calls?category=${encodeURIComponent(category)}&type=${encodeURIComponent(type)}`;
     if (client) url += `&client=${encodeURIComponent(client)}`;
     const r = await fetch(url, { headers: getAuthHeader() });
-    return (await r.json()).data || [];
+    const json = await r.json();
+    if (json.data && typeof json.data === 'object' && json.data.iv) {
+      const decrypted = await decryptResponse(json.data);
+      return decrypted.data || [];
+    }
+    return json.data || [];
   },
 
   async updateStatus(

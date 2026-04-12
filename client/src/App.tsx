@@ -3,6 +3,7 @@ import './App.css';
 import { api, CategoryStat, TypeStat, CallRow } from './api';
 import Metrics from './Metrics';
 import LoginPage from './LoginPage';
+import { decryptResponse } from './crypto';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -449,20 +450,26 @@ export default function App() {
     }
   }, [token]);
 
-  const loadCategories = useCallback(() => {
+  const loadCategories = useCallback(async () => {
     setLoading(true);
-    const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
-    Promise.all([
-      api.getCategories(clientFilter || undefined),
-      fetch(`/api/metrics${qs}`).then(r => r.json()),
-    ]).then(([cats, metricsData]) => {
+    try {
+      const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
+      const [cats, metricsRes] = await Promise.all([
+        api.getCategories(clientFilter || undefined),
+        fetch(`/api/metrics${qs}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
+      ]);
+      let metricsData = metricsRes.data;
+      if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
+        metricsData = await decryptResponse(metricsData);
+      }
       setCategories(cats);
-      setMetrics(metricsData.data);
+      setMetrics(metricsData);
       setLoading(false);
-    }).catch(() => {
+    } catch (err) {
+      console.error('Error loading data:', err);
       setLoading(false);
-    });
-  }, [clientFilter]);
+    }
+  }, [clientFilter, token]);
 
   useEffect(() => { if (token) loadCategories(); }, [loadCategories, token]);
 

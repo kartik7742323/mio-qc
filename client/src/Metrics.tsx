@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { decryptResponse } from './crypto';
 
 interface MetricsData {
   summary: {
@@ -112,13 +113,26 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
+    const token = sessionStorage.getItem('mio_auth_token');
+    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
     const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
     Promise.all([
-      fetch(`/api/metrics${qs}`).then(r => r.json()),
-      fetch(`/api/categories${qs}`).then(r => r.json()),
-    ]).then(([metrics, cats]) => {
-      setData(metrics.data);
-      setCategories(cats.data || []);
+      fetch(`/api/metrics${qs}`, { headers: authHeader }).then(r => r.json()),
+      fetch(`/api/categories${qs}`, { headers: authHeader }).then(r => r.json()),
+    ]).then(async ([metrics, cats]) => {
+      let metricsData = metrics.data;
+      let catsData = cats.data;
+
+      // Decrypt if encrypted
+      if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
+        metricsData = await decryptResponse(metricsData);
+      }
+      if (catsData && typeof catsData === 'object' && catsData.iv) {
+        catsData = await decryptResponse(catsData);
+      }
+
+      setData(metricsData);
+      setCategories(catsData || []);
       setLoading(false);
     }).catch(err => {
       console.error('Error loading analytics:', err);
