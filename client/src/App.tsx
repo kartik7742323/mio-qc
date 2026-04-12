@@ -437,9 +437,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryStat | null>(null);
   const [selectedType, setSelectedType]         = useState<TypeStat | null>(null);
 
-  // Check auth - show login if no token (AFTER all hooks)
-  if (!token) return <LoginPage />;
-
   const handleApiError = (err: any) => {
     if (err.status === 401) {
       sessionStorage.removeItem('mio_auth_token');
@@ -448,8 +445,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    api.getClients().then(setClients).catch(handleApiError);
-  }, []);
+    if (token) {
+      api.getClients().then(setClients).catch(handleApiError);
+    }
+  }, [token]);
 
   const loadCategories = useCallback(() => {
     setLoading(true);
@@ -466,12 +465,15 @@ export default function App() {
     });
   }, [clientFilter]);
 
-  useEffect(() => { loadCategories(); }, [loadCategories]);
+  useEffect(() => { if (token) loadCategories(); }, [loadCategories, token]);
 
   useEffect(() => {
     setSelectedCategory(null);
     setSelectedType(null);
   }, [clientFilter]);
+
+  // Check auth - show login if no token
+  if (!token) return <LoginPage />;
 
   const filteredCats = categories
     .filter(cat => {
