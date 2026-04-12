@@ -40,8 +40,16 @@ app.get('/api/categories', async (req, res) => {
   try {
     const { client } = req.query;
     const allData = await analyticsService.getCategoryBreakdown(client || null);
-    // Filter out excluded categories for the main view
-    const data = allData.filter(c => !EXCLUDED_FROM_METRICS.includes(c.category));
+    // Filter out excluded categories and types
+    const data = allData
+      .filter(c => !EXCLUDED_FROM_METRICS.includes(c.category))
+      .map(c => ({
+        ...c,
+        count: c.count - (c.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.count, 0) || 0),
+        openCount: c.openCount - (c.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.openCount, 0) || 0),
+        resolvedCount: c.resolvedCount - (c.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.resolvedCount, 0) || 0),
+        types: c.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
+      }));
     res.json({ success: true, data });
   } catch (error) {
     console.error(error);
@@ -56,9 +64,14 @@ app.get('/api/calls', async (req, res) => {
     if (!category || !type) {
       return res.status(400).json({ success: false, error: 'category and type required' });
     }
+    const decodedType = decodeURIComponent(type);
+    // Block access to excluded types
+    if (EXCLUDED_TYPES.includes(decodedType)) {
+      return res.json({ success: true, data: [] });
+    }
     const data = await analyticsService.getCallsForType(
       decodeURIComponent(category),
-      decodeURIComponent(type),
+      decodedType,
       client || null
     );
     res.json({ success: true, data });
