@@ -3,7 +3,6 @@ import './App.css';
 import { api, CategoryStat, TypeStat, CallRow } from './api';
 import Metrics from './Metrics';
 import LoginPage from './LoginPage';
-import { decryptResponse } from './crypto';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
