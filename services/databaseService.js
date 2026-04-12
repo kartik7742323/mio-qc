@@ -64,6 +64,10 @@ class DatabaseService {
 
   async updateIssueStatus(executionId, client, category, type, status) {
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        resolve({ id: null });
+        return;
+      }
       this.db.run(
         `INSERT INTO issue_status (execution_id, client, category, type, status)
          VALUES (?, ?, ?, ?, ?)
@@ -81,6 +85,10 @@ class DatabaseService {
 
   async getIssueStatus(executionId, client, category, type) {
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        resolve('open');
+        return;
+      }
       this.db.get(
         `SELECT status FROM issue_status
          WHERE execution_id = ? AND client = ? AND category = ? AND type = ?`,
@@ -95,6 +103,10 @@ class DatabaseService {
 
   async getAllIssueStatuses(client) {
     return new Promise((resolve, reject) => {
+      if (!this.db) {
+        resolve([]);
+        return;
+      }
       this.db.all(
         `SELECT execution_id, category, type, status FROM issue_status WHERE client = ?`,
         [client],
