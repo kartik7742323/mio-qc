@@ -148,12 +148,12 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
 
       {/* ── 4 KPI Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        <KpiCard label="Total QC Done" value={summary.totalQcDone} sub="all calls reviewed" />
+        <KpiCard label="Total Calls QCed" value={summary.totalQcDone} sub="all calls reviewed" />
         <KpiCard
-          label="Agent Issues Found"
-          value={summary.totalOccurrences}
+          label="Open"
+          value={summary.totalOpen}
           color="#ef4444"
-          sub="excluding user/system"
+          sub="unresolved"
         />
         <KpiCard
           label="Resolved"
@@ -165,7 +165,7 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
           label="Resolution Rate"
           value={`${summary.resolutionRate}%`}
           color={summary.resolutionRate > 50 ? '#10b981' : '#ef4444'}
-          sub="of agent issues"
+          sub="of all issues"
         />
       </div>
 
