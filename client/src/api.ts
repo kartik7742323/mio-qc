@@ -1,8 +1,9 @@
 const BASE = '/api';
 
-function getAuthHeader() {
-  const token = sessionStorage.getItem('mio_auth_token') || '';
-  return token ? { 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' };
+function getAuthHeader(): any {
+  const token = sessionStorage.getItem('mio_auth_token');
+  if (!token) return {};
+  return { 'Authorization': `Bearer ${token}` };
 }
 
 export interface TypeStat {
