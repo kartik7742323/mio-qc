@@ -426,10 +426,6 @@ function CallsTable({ category, issueType, clientFilter, onBack, onBackAll }: {
 
 export default function App() {
   const token = sessionStorage.getItem('mio_auth_token') || '';
-
-  // Check auth - show login if no token
-  if (!token) return <LoginPage />;
-
   const [clients, setClients]         = useState<string[]>([]);
   const [clientFilter, setClientFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -441,7 +437,8 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryStat | null>(null);
   const [selectedType, setSelectedType]         = useState<TypeStat | null>(null);
 
-  const authHeader = { 'Authorization': `Bearer ${token}` };
+  // Check auth - show login if no token (AFTER all hooks)
+  if (!token) return <LoginPage />;
 
   const handleApiError = (err: any) => {
     if (err.status === 401) {
