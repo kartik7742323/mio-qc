@@ -289,7 +289,7 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       {/* ── Issue Type Share per Category ── */}
       <SectionTitle icon="🗂️">Issue Type Breakdown by Category</SectionTitle>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-        {categories.map(cat => {
+        {[...categories].sort((a, b) => b.count - a.count).map(cat => {
           const color   = catColor(cat.category);
           const bg      = catBg(cat.category);
           const sorted  = [...cat.types].sort((a, b) => b.count - a.count);

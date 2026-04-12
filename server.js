@@ -170,13 +170,15 @@ app.get('/api/metrics', async (req, res) => {
           totalCategories: cats.length,
           totalUniqueTypes: allTypes.length,
         },
-        categoryBreakdown: catsWithoutExcludedTypes.map(c => ({
-          category: c.category,
-          count: c.count,
-          openCount: c.openCount,
-          resolvedCount: c.resolvedCount,
-          pct: totalOccurrences > 0 ? Math.round((c.count / totalOccurrences) * 100) : 0,
-        })),
+        categoryBreakdown: catsWithoutExcludedTypes
+          .map(c => ({
+            category: c.category,
+            count: c.count,
+            openCount: c.openCount,
+            resolvedCount: c.resolvedCount,
+            pct: totalOccurrences > 0 ? Math.round((c.count / totalOccurrences) * 100) : 0,
+          }))
+          .sort((a, b) => b.count - a.count),
         excludedCategoryBreakdown: excludedCats.map(c => ({
           category: c.category,
           count: c.count,
