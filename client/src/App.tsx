@@ -59,32 +59,14 @@ function CategoryTable({ categories, loading, onSelect }: {
     return <div className="loader"><div className="spinner" />Loading data from Google Sheets…</div>;
   }
 
-  const totalIssues = categories.reduce((s, c) => s + c.count, 0);
-  const totalOpen   = categories.reduce((s, c) => s + c.openCount, 0);
-  const totalRes    = categories.reduce((s, c) => s + c.resolvedCount, 0);
-  const resRate     = totalIssues > 0 ? Math.round((totalRes / totalIssues) * 100) : 0;
-
   if (!categories.length) return (
     <div>
-      <div className="stat-cards">
-        <StatCard label="Total Issues" value={0} sub="No data for selected filter" />
-        <StatCard label="Open" value={0} variant="red" />
-        <StatCard label="Resolved" value={0} variant="green" />
-        <StatCard label="Resolution Rate" value="—" />
-      </div>
       <div className="empty">No data found for the selected filters.</div>
     </div>
   );
 
   return (
     <div>
-      <div className="stat-cards">
-        <StatCard label="Total Issues" value={totalIssues} sub="across all QC'd calls" />
-        <StatCard label="Open" value={totalOpen} variant="red" sub="needs attention" />
-        <StatCard label="Resolved" value={totalRes} variant="green" sub="marked resolved" />
-        <StatCard label="Resolution Rate" value={`${resRate}%`} variant={resRate > 50 ? 'green' : 'red'} sub="of all issues" />
-      </div>
-
       <div className="card">
         <table>
           <thead>
