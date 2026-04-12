@@ -146,11 +146,17 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
         </p>
       </div>
 
-      {/* ── 4 KPI Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      {/* ── 5 KPI Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
         <KpiCard label="Total Calls QCed" value={summary.totalQcDone} sub="all calls reviewed" />
         <KpiCard
-          label="Open"
+          label="Total Issues"
+          value={summary.totalOccurrences}
+          color="#f59e0b"
+          sub="agent-related"
+        />
+        <KpiCard
+          label="Open Issues"
           value={summary.totalOpen}
           color="#ef4444"
           sub="unresolved"
