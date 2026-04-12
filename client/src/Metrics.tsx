@@ -102,11 +102,9 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
   const [data, setData]           = useState<MetricsData | null>(null);
   const [categories, setCategories] = useState<CategoryDetail[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    setError(null);
     const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
     Promise.all([
       fetch(`/api/metrics${qs}`).then(r => r.json()),
@@ -114,10 +112,6 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
     ]).then(([metrics, cats]) => {
       setData(metrics.data);
       setCategories(cats.data || []);
-      setLoading(false);
-    }).catch(err => {
-      console.error('Metrics fetch failed:', err);
-      setError(err.message);
       setLoading(false);
     });
   }, [clientFilter]);
@@ -127,19 +121,7 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       <div className="spinner" />Loading analytics…
     </div>
   );
-
-  if (error) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, gap: 14, color: '#ef4444' }}>
-      <div>Error loading analytics</div>
-      <div style={{ fontSize: 12, color: '#94a3b8' }}>{error}</div>
-    </div>
-  );
-
-  if (!data) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, gap: 14, color: '#94a3b8' }}>
-      <div>No data available</div>
-    </div>
-  );
+  if (!data) return null;
 
   const { summary, categoryBreakdown, top10Types, clientBreakdown } = data;
   const maxCat    = categoryBreakdown[0]?.count || 1;
