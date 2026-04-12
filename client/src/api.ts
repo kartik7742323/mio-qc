@@ -1,5 +1,3 @@
-import { decryptResponse } from './crypto';
-
 const BASE = '/api';
 
 function getAuthHeader(): any {
