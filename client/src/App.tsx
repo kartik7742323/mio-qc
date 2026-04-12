@@ -464,14 +464,16 @@ export default function App() {
     setSelectedType(null);
   }, [clientFilter]);
 
-  const filteredCats = categories.filter(cat => {
-    // Exclude non-agent issue categories from main view
-    if (EXCLUDED_FROM_METRICS.includes(cat.category)) return false;
-    if (statusFilter === 'open'     && cat.openCount === 0)     return false;
-    if (statusFilter === 'resolved' && cat.resolvedCount === 0) return false;
-    if (search && !cat.category.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredCats = categories
+    .filter(cat => {
+      // Exclude non-agent issue categories from main view
+      if (EXCLUDED_FROM_METRICS.includes(cat.category)) return false;
+      if (statusFilter === 'open'     && cat.openCount === 0)     return false;
+      if (statusFilter === 'resolved' && cat.resolvedCount === 0) return false;
+      if (search && !cat.category.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => b.count - a.count);
 
   const totalOccurrences = categories.reduce((s, c) => s + c.count, 0);
   const totalOpen        = categories.reduce((s, c) => s + c.openCount, 0);
