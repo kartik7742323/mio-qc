@@ -120,20 +120,34 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       fetch(`/api/metrics${qs}`, { headers: authHeader }).then(r => r.json()),
       fetch(`/api/categories${qs}`, { headers: authHeader }).then(r => r.json()),
     ]).then(async ([metrics, cats]) => {
-      let metricsData = metrics.data;
-      let catsData = cats.data;
+      try {
+        console.log('Metrics response:', metrics);
+        console.log('Categories response:', cats);
 
-      // Decrypt if encrypted
-      if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
-        metricsData = await decryptResponse(metricsData);
-      }
-      if (catsData && typeof catsData === 'object' && catsData.iv) {
-        catsData = await decryptResponse(catsData);
-      }
+        let metricsData = metrics.data;
+        let catsData = cats.data;
 
-      setData(metricsData);
-      setCategories(catsData || []);
-      setLoading(false);
+        // Decrypt if encrypted
+        if (metricsData && typeof metricsData === 'object' && metricsData.iv) {
+          console.log('Decrypting metrics...');
+          metricsData = await decryptResponse(metricsData);
+        }
+        if (catsData && typeof catsData === 'object' && catsData.iv) {
+          console.log('Decrypting categories...');
+          catsData = await decryptResponse(catsData);
+        }
+
+        console.log('Decrypted metrics data:', metricsData);
+        console.log('Decrypted categories:', catsData);
+
+        setData(metricsData);
+        setCategories(catsData || []);
+        setLoading(false);
+      } catch (decryptErr) {
+        console.error('Decryption error:', decryptErr);
+        setError('Failed to decrypt data. Please try refreshing.');
+        setLoading(false);
+      }
     }).catch(err => {
       console.error('Error loading analytics:', err);
       setError('Failed to load analytics data. Please try again.');
@@ -151,7 +165,14 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       ⚠️ {error}
     </div>
   );
-  if (!data) return null;
+  if (!data) {
+    console.warn('Metrics: no data loaded');
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, gap: 14, color: '#94a3b8' }}>
+        No data available
+      </div>
+    );
+  }
 
   const { summary, categoryBreakdown, top10Types, clientBreakdown } = data;
   const maxCat    = categoryBreakdown[0]?.count || 1;
