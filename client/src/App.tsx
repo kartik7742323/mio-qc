@@ -534,18 +534,24 @@ export default function App() {
 
         <div className="sidebar-section">
           <span className="sidebar-section-lbl">{clientFilter ? clientFilter.trim() : 'All Clients'}</span>
-          <div className="sidebar-stat">
-            <span className="sidebar-stat-lbl">Total Issues</span>
-            <span className="sidebar-stat-val">{totalOccurrences.toLocaleString()}</span>
-          </div>
-          <div className="sidebar-stat">
-            <span className="sidebar-stat-lbl">Open</span>
-            <span className="sidebar-stat-val red">{totalOpen.toLocaleString()}</span>
-          </div>
-          <div className="sidebar-stat">
-            <span className="sidebar-stat-lbl">Resolved</span>
-            <span className="sidebar-stat-val green">{totalResolved.toLocaleString()}</span>
-          </div>
+          {metrics ? (
+            <>
+              <div className="sidebar-stat">
+                <span className="sidebar-stat-lbl">Total Issues</span>
+                <span className="sidebar-stat-val">{metrics.summary.totalOccurrences.toLocaleString()}</span>
+              </div>
+              <div className="sidebar-stat">
+                <span className="sidebar-stat-lbl">Open</span>
+                <span className="sidebar-stat-val red">{metrics.summary.totalOpen.toLocaleString()}</span>
+              </div>
+              <div className="sidebar-stat">
+                <span className="sidebar-stat-lbl">Resolved</span>
+                <span className="sidebar-stat-val green">{metrics.summary.totalResolved.toLocaleString()}</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>Loading...</div>
+          )}
         </div>
       </aside>
 
