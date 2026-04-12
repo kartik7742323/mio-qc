@@ -444,6 +444,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch]           = useState('');
   const [categories, setCategories]   = useState<CategoryStat[]>([]);
+  const [metrics, setMetrics]         = useState<any>(null);
   const [loading, setLoading]         = useState(true);
   const [view, setView]               = useState<'issues' | 'metrics'>('issues');
   const [selectedCategory, setSelectedCategory] = useState<CategoryStat | null>(null);
@@ -453,8 +454,17 @@ export default function App() {
 
   const loadCategories = useCallback(() => {
     setLoading(true);
-    api.getCategories(clientFilter || undefined)
-      .then(setCategories).finally(() => setLoading(false));
+    const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
+    Promise.all([
+      api.getCategories(clientFilter || undefined),
+      fetch(`/api/metrics${qs}`).then(r => r.json()),
+    ]).then(([cats, metricsData]) => {
+      setCategories(cats);
+      setMetrics(metricsData.data);
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+    });
   }, [clientFilter]);
 
   useEffect(() => { loadCategories(); }, [loadCategories]);
@@ -475,9 +485,6 @@ export default function App() {
     })
     .sort((a, b) => b.count - a.count);
 
-  const totalOccurrences = categories.reduce((s, c) => s + c.count, 0);
-  const totalOpen        = categories.reduce((s, c) => s + c.openCount, 0);
-  const totalResolved    = categories.reduce((s, c) => s + c.resolvedCount, 0);
 
   const goIssues = () => { setView('issues'); };
   const goMetrics = () => { setView('metrics'); };
@@ -570,6 +577,16 @@ export default function App() {
               <h1>Issue Explorer</h1>
               <p>Category-level overview · click any row to drill into issue types, then into individual calls</p>
             </div>
+
+            {metrics && (
+              <div className="stat-cards">
+                <StatCard label="Total Calls QCed" value={metrics.summary.totalQcDone} sub="all calls reviewed" />
+                <StatCard label="Total Issues" value={metrics.summary.totalOccurrences} sub="agent-related" variant="purple" />
+                <StatCard label="Open Issues" value={metrics.summary.totalOpen} sub="unresolved" variant="red" />
+                <StatCard label="Resolved" value={metrics.summary.totalResolved} sub="marked done" variant="green" />
+                <StatCard label="Resolution Rate" value={`${metrics.summary.resolutionRate}%`} sub={metrics.summary.resolutionRate > 50 ? 'on track' : 'needs focus'} variant={metrics.summary.resolutionRate > 50 ? 'green' : 'red'} />
+              </div>
+            )}
 
             <div className="filter-bar">
               <div className="search-wrap">
