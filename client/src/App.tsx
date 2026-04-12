@@ -46,7 +46,7 @@ function StatCard({ label, value, sub, variant }: {
 }
 
 const EXCLUDE_CLIENTS = ['Master data ', 'Clients ', 'Report '];
-const EXCLUDED_FROM_METRICS = ['User_Behaviour', 'System_Detection'];
+const EXCLUDED_FROM_METRICS = ['User_Behaviour'];
 
 // ── Category Overview ─────────────────────────────────────────────────────────
 

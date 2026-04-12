@@ -83,7 +83,9 @@ app.post('/api/issue-status', async (req, res) => {
 });
 
 // Categories to exclude from main metrics (less prominent)
-const EXCLUDED_FROM_METRICS = ['User_Behaviour', 'System_Detection'];
+const EXCLUDED_FROM_METRICS = ['User_Behaviour'];
+// Issue types to exclude (not agent issues)
+const EXCLUDED_TYPES = ['Voicemail Detected'];
 
 // GET /api/metrics?client=X  → full analytics for the metrics page
 app.get('/api/metrics', async (req, res) => {
@@ -95,12 +97,21 @@ app.get('/api/metrics', async (req, res) => {
     const cats = allCats.filter(c => !EXCLUDED_FROM_METRICS.includes(c.category));
     const excludedCats = allCats.filter(c => EXCLUDED_FROM_METRICS.includes(c.category));
 
-    const totalOccurrences = cats.reduce((s, c) => s + c.count, 0);
-    const totalOpen = cats.reduce((s, c) => s + c.openCount, 0);
-    const totalResolved = cats.reduce((s, c) => s + c.resolvedCount, 0);
+    // Filter out excluded types from all categories
+    const catsWithoutExcludedTypes = cats.map(cat => ({
+      ...cat,
+      count: cat.count - (cat.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.count, 0) || 0),
+      openCount: cat.openCount - (cat.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.openCount, 0) || 0),
+      resolvedCount: cat.resolvedCount - (cat.types.filter(t => EXCLUDED_TYPES.includes(t.type)).reduce((s, t) => s + t.resolvedCount, 0) || 0),
+      types: cat.types.filter(t => !EXCLUDED_TYPES.includes(t.type)),
+    }));
+
+    const totalOccurrences = catsWithoutExcludedTypes.reduce((s, c) => s + c.count, 0);
+    const totalOpen = catsWithoutExcludedTypes.reduce((s, c) => s + c.openCount, 0);
+    const totalResolved = catsWithoutExcludedTypes.reduce((s, c) => s + c.resolvedCount, 0);
 
     // Top 10 issue types across all categories
-    const allTypes = cats.flatMap(c => c.types.map(t => ({ ...t, category: c.category })));
+    const allTypes = catsWithoutExcludedTypes.flatMap(c => c.types.map(t => ({ ...t, category: c.category })));
     const top10Types = allTypes.sort((a, b) => b.count - a.count).slice(0, 10);
 
     // Per-client issue counts
@@ -146,12 +157,12 @@ app.get('/api/metrics', async (req, res) => {
           totalCategories: cats.length,
           totalUniqueTypes: allTypes.length,
         },
-        categoryBreakdown: cats.map(c => ({
+        categoryBreakdown: catsWithoutExcludedTypes.map(c => ({
           category: c.category,
           count: c.count,
           openCount: c.openCount,
           resolvedCount: c.resolvedCount,
-          pct: Math.round((c.count / totalOccurrences) * 100),
+          pct: totalOccurrences > 0 ? Math.round((c.count / totalOccurrences) * 100) : 0,
         })),
         excludedCategoryBreakdown: excludedCats.map(c => ({
           category: c.category,
