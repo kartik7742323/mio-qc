@@ -113,8 +113,8 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const token = sessionStorage.getItem('mio_auth_token');
-    const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const token = sessionStorage.getItem('mio_auth_token') || '';
+    const authHeader: any = token ? { 'Authorization': `Bearer ${token}` } : {};
     const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
     Promise.all([
       fetch(`/api/metrics${qs}`, { headers: authHeader }).then(r => r.json()),
