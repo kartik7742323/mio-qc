@@ -107,9 +107,11 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
   const [data, setData]           = useState<MetricsData | null>(null);
   const [categories, setCategories] = useState<CategoryDetail[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
     Promise.all([
       fetch(`/api/metrics${qs}`).then(r => r.json()),
@@ -118,12 +120,21 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
       setData(metrics.data);
       setCategories(cats.data || []);
       setLoading(false);
+    }).catch(err => {
+      console.error('Error loading analytics:', err);
+      setError('Failed to load analytics data. Please try again.');
+      setLoading(false);
     });
   }, [clientFilter]);
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, gap: 14, color: '#94a3b8' }}>
       <div className="spinner" />Loading analytics…
+    </div>
+  );
+  if (error) return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, gap: 14, color: '#ef4444' }}>
+      ⚠️ {error}
     </div>
   );
   if (!data) return null;
