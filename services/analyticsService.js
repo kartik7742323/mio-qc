@@ -1,6 +1,6 @@
 const sheetsService = require('./sheetsService');
 const databaseService = require('./databaseService');
-const { normalizeRow } = require('./masterData');
+const { normalizeRow, buildTypeLookuFromMasterData } = require('./masterData');
 
 class AnalyticsService {
 
@@ -47,6 +47,10 @@ class AnalyticsService {
       ? [clientFilter]
       : await sheetsService.getAllClients();
 
+    // Fetch master data and build dynamic TYPE_LOOKUP
+    const masterData = await sheetsService.getMasterData();
+    const dynamicTypeLookup = buildTypeLookuFromMasterData(masterData);
+
     // category → { count, openCount, resolvedCount, types: { typeName → {count, open, resolved} } }
     const categoryMap = {};
 
@@ -56,7 +60,7 @@ class AnalyticsService {
 
       for (const row of rows) {
         // normalizeRow handles comma-separated multi-issue cells, typos, case variants, clean calls
-        const normalized = normalizeRow(row.category, row.type, row.manualQc, row.missedByAi);
+        const normalized = normalizeRow(row.category, row.type, row.manualQc, row.missedByAi, dynamicTypeLookup);
         if (!normalized.length) continue;
 
         // Count each category and type ONCE per row (not per issue instance)
@@ -127,6 +131,10 @@ class AnalyticsService {
       ? [clientFilter]
       : await sheetsService.getAllClients();
 
+    // Fetch master data and build dynamic TYPE_LOOKUP
+    const masterData = await sheetsService.getMasterData();
+    const dynamicTypeLookup = buildTypeLookuFromMasterData(masterData);
+
     const calls = [];
 
     for (const client of clients) {
@@ -134,7 +142,7 @@ class AnalyticsService {
       const statusMap = await this.buildStatusMap(client);
 
       for (const row of rows) {
-        const normalized = normalizeRow(row.category, row.type, row.manualQc, row.missedByAi);
+        const normalized = normalizeRow(row.category, row.type, row.manualQc, row.missedByAi, dynamicTypeLookup);
         const match = normalized.find(n => n.category === category && n.type === type);
         if (!match) continue;
 

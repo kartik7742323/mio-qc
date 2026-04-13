@@ -243,10 +243,19 @@ function normalizeCategories(raw) {
  *  - Ambiguous types (uses sheet category as hint)
  *  - "Many Type of Issues" / Adamas special case
  * Rows with no category AND no type are already filtered out in sheetsService.
+ *
+ * @param {string} rawCategory - Category from sheet
+ * @param {string} rawType - Type from sheet
+ * @param {string} manualQc - Manual QC flag
+ * @param {string} missedByAi - Missed by AI flag
+ * @param {object} dynamicTypeLookup - Dynamic TYPE_LOOKUP built from master data (optional)
  */
-function normalizeRow(rawCategory, rawType, manualQc, missedByAi) {
+function normalizeRow(rawCategory, rawType, manualQc, missedByAi, dynamicTypeLookup) {
   const catHint = (rawCategory || '').trim().toLowerCase();
   const rawTypeTrimmed = (rawType || '').trim();
+
+  // Use dynamic lookup if provided, otherwise fall back to hardcoded one
+  const activeLookup = dynamicTypeLookup || TYPE_LOOKUP;
 
   // ── Skip if both empty (shouldn't reach here, filtered in sheetsService) ──
   if (!rawCategory && !rawType) return [];
@@ -290,19 +299,19 @@ function normalizeRow(rawCategory, rawType, manualQc, missedByAi) {
     }
 
     // Direct lookup
-    if (TYPE_LOOKUP[key]) {
-      const r = TYPE_LOOKUP[key];
+    if (activeLookup[key]) {
+      const r = activeLookup[key];
       const dedup = r.type + '|' + r.category;
       if (!seen.has(dedup)) { seen.add(dedup); results.push({ ...r }); }
       continue;
     }
 
     // ── Fuzzy fallback: try partial match ──
-    const fuzzyKey = Object.keys(TYPE_LOOKUP).find(k =>
+    const fuzzyKey = Object.keys(activeLookup).find(k =>
       key.includes(k) || k.includes(key) && key.length > 4
     );
     if (fuzzyKey) {
-      const r = TYPE_LOOKUP[fuzzyKey];
+      const r = activeLookup[fuzzyKey];
       const dedup = r.type + '|' + r.category;
       if (!seen.has(dedup)) { seen.add(dedup); results.push({ ...r }); }
       continue;
@@ -322,4 +331,21 @@ function normalizeRow(rawCategory, rawType, manualQc, missedByAi) {
   return results;
 }
 
-module.exports = { MASTER_CATEGORIES, TYPE_LOOKUP, normalizeRow, normalizeCategories };
+/**
+ * Build TYPE_LOOKUP dynamically from master data
+ * This ensures that when master data changes in Sheet2, the lookup reflects it
+ */
+function buildTypeLookuFromMasterData(masterData) {
+  const lookup = {};
+
+  for (const [category, types] of Object.entries(masterData)) {
+    for (const type of types) {
+      const key = type.toLowerCase().trim();
+      lookup[key] = { type, category };
+    }
+  }
+
+  return lookup;
+}
+
+module.exports = { MASTER_CATEGORIES, TYPE_LOOKUP, normalizeRow, normalizeCategories, buildTypeLookuFromMasterData };
