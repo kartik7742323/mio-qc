@@ -17,7 +17,7 @@ class SheetsService {
       });
 
       return spreadsheet.data.sheets
-        .filter((s) => !config.EXCLUDE_SHEETS.includes(s.properties.title.trim()))
+        .filter((s) => !config.EXCLUDE_SHEETS.includes(s.properties.title))
         .map((s) => s.properties.title);
     } catch (error) {
       console.error('Error fetching clients:', error);
