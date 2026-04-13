@@ -59,24 +59,51 @@ class AnalyticsService {
         const normalized = normalizeRow(row.category, row.type, row.manualQc, row.missedByAi);
         if (!normalized.length) continue;
 
-        for (const { type, category } of normalized) {
-          const statusKey = `${row.executionId}|${category}|${type}`;
-          const status = statusMap[statusKey] || 'open';
+        // Count each category and type ONCE per row (not per issue instance)
+        const categoriesInRow = new Set();
+        const typesInRow = {};  // category -> Set of types
 
+        for (const { type, category } of normalized) {
+          categoriesInRow.add(category);
+          if (!typesInRow[category]) typesInRow[category] = new Set();
+          typesInRow[category].add(type);
+        }
+
+        // Now count each category/type once per row
+        for (const category of categoriesInRow) {
           if (!categoryMap[category]) {
             categoryMap[category] = { category, count: 0, openCount: 0, resolvedCount: 0, types: {} };
           }
+          // Count the row once for this category
           categoryMap[category].count++;
-          if (status === 'resolved') categoryMap[category].resolvedCount++;
-          else categoryMap[category].openCount++;
 
-          if (!categoryMap[category].types[type]) {
-            categoryMap[category].types[type] = { type, count: 0, openCount: 0, resolvedCount: 0, clients: new Set() };
+          // For status, check if any instance of this category in row is resolved
+          const categoryStatuses = normalized
+            .filter(n => n.category === category)
+            .map(n => statusMap[`${row.executionId}|${n.category}|${n.type}`] || 'open');
+
+          const isResolved = categoryStatuses.every(s => s === 'resolved');
+          if (isResolved && categoryStatuses.length > 0) {
+            categoryMap[category].resolvedCount++;
+          } else {
+            categoryMap[category].openCount++;
           }
-          categoryMap[category].types[type].count++;
-          categoryMap[category].types[type].clients.add(client);
-          if (status === 'resolved') categoryMap[category].types[type].resolvedCount++;
-          else categoryMap[category].types[type].openCount++;
+
+          // Count types once per row per category
+          for (const type of typesInRow[category]) {
+            if (!categoryMap[category].types[type]) {
+              categoryMap[category].types[type] = { type, count: 0, openCount: 0, resolvedCount: 0, clients: new Set() };
+            }
+            categoryMap[category].types[type].count++;
+            categoryMap[category].types[type].clients.add(client);
+
+            const typeStatus = statusMap[`${row.executionId}|${category}|${type}`] || 'open';
+            if (typeStatus === 'resolved') {
+              categoryMap[category].types[type].resolvedCount++;
+            } else {
+              categoryMap[category].types[type].openCount++;
+            }
+          }
         }
       }
     }
