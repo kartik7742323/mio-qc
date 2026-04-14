@@ -432,6 +432,9 @@ export default function App() {
   const [categories, setCategories]   = useState<CategoryStat[]>([]);
   const [metrics, setMetrics]         = useState<any>(null);
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [view, setView]               = useState<'issues' | 'metrics'>('issues');
   const [selectedCategory, setSelectedCategory] = useState<CategoryStat | null>(null);
   const [selectedType, setSelectedType]         = useState<TypeStat | null>(null);
@@ -449,19 +452,28 @@ export default function App() {
     }
   }, [token]);
 
-  const loadCategories = useCallback(async () => {
+  const loadCategories = useCallback(async (forceRefresh = false) => {
     setLoading(true);
+    setError(null);
     try {
       const qs = clientFilter ? `?client=${encodeURIComponent(clientFilter)}` : '';
+      const refreshParam = forceRefresh ? (qs ? '&refresh=1' : '?refresh=1') : '';
+
       const [cats, metricsRes] = await Promise.all([
         api.getCategories(clientFilter || undefined),
-        fetch(`/api/metrics${qs}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
+        fetch(`/api/metrics${qs}${refreshParam}`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        }),
       ]);
+
       setCategories(cats);
       setMetrics(metricsRes.data);
+      setLastUpdated(new Date());
       setLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading data:', err);
+      setError(err.message || 'Failed to load data. Please try again.');
       setLoading(false);
     }
   }, [clientFilter, token]);
@@ -472,6 +484,22 @@ export default function App() {
     setSelectedCategory(null);
     setSelectedType(null);
   }, [clientFilter]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadCategories(true);
+    setIsRefreshing(false);
+  };
+
+  const getLastUpdatedText = () => {
+    if (!lastUpdated) return 'Never';
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return lastUpdated.toLocaleDateString();
+  };
 
   // Check auth - show login if no token
   if (!token) return <LoginPage />;
@@ -535,7 +563,28 @@ export default function App() {
         </div>
 
         <div className="sidebar-section">
-          <span className="sidebar-section-lbl">{clientFilter ? clientFilter.trim() : 'All Clients'}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span className="sidebar-section-lbl">{clientFilter ? clientFilter.trim() : 'All Clients'}</span>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Refresh data (bypass cache)"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                padding: '4px 6px',
+                fontSize: 16,
+                opacity: isRefreshing ? 0.6 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              {isRefreshing ? '⟳' : '🔄'}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 12 }}>
+            Updated {getLastUpdatedText()}
+          </div>
           {metrics ? (
             <>
               <div className="sidebar-stat">
@@ -560,7 +609,7 @@ export default function App() {
       {/* ── Main ── */}
       <main className="main">
         {view === 'metrics' ? (
-          <Metrics clientFilter={clientFilter} />
+          <Metrics clientFilter={clientFilter} onRefresh={handleRefresh} isRefreshing={isRefreshing} lastUpdated={lastUpdated} />
 
         ) : selectedCategory && selectedType ? (
           <CallsTable
@@ -585,6 +634,29 @@ export default function App() {
               <h1>Issue Explorer</h1>
               <p>Category-level overview · click any row to drill into issue types, then into individual calls</p>
             </div>
+
+            {error && (
+              <div style={{
+                background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
+                padding: 16, borderRadius: 8, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div>
+                  <strong>⚠️ Error loading data</strong><br />
+                  <span style={{ fontSize: 12 }}>{error}</span>
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  style={{
+                    padding: '6px 12px', background: '#dc2626', color: '#fff', border: 'none',
+                    borderRadius: 6, cursor: isRefreshing ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600,
+                    opacity: isRefreshing ? 0.7 : 1, transition: 'opacity 0.2s'
+                  }}
+                >
+                  {isRefreshing ? 'Retrying...' : 'Retry'}
+                </button>
+              </div>
+            )}
 
             {metrics && (
               <div className="stat-cards">

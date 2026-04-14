@@ -103,7 +103,12 @@ function SectionTitle({ icon, children }: { icon: string; children: string }) {
 
 const EXCLUDE = ['Master data ', 'Clients ', 'Report '];
 
-export default function Metrics({ clientFilter }: { clientFilter: string }) {
+export default function Metrics({ clientFilter, onRefresh, isRefreshing, lastUpdated }: {
+  clientFilter: string;
+  onRefresh?: () => Promise<void>;
+  isRefreshing?: boolean;
+  lastUpdated?: Date | null;
+}) {
   const [data, setData]           = useState<MetricsData | null>(null);
   const [categories, setCategories] = useState<CategoryDetail[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -164,12 +169,38 @@ export default function Metrics({ clientFilter }: { clientFilter: string }) {
     <div style={{ paddingBottom: 48 }}>
       {/* ── Header ── */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1e2e', letterSpacing: '-.5px' }}>
-          Analytics
-        </h1>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 5 }}>
-          {clientFilter ? `Client: ${clientFilter.trim()}` : 'All Clients'} · Identify and prioritise what to fix
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1e2e', letterSpacing: '-.5px' }}>
+              Analytics
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748b', marginTop: 5 }}>
+              {clientFilter ? `Client: ${clientFilter.trim()}` : 'All Clients'} · Identify and prioritise what to fix
+            </p>
+          </div>
+          {onRefresh && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              {lastUpdated && (
+                <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'right' }}>
+                  Updated {lastUpdated && `${Math.floor((Date.now() - lastUpdated.getTime()) / 60000)}m ago`}
+                </div>
+              )}
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                title="Refresh data (bypass cache)"
+                style={{
+                  background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#4b5563',
+                  padding: '6px 12px', borderRadius: 6, cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                  fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+                  opacity: isRefreshing ? 0.6 : 1, transition: 'all 0.2s'
+                }}
+              >
+                {isRefreshing ? '⟳ Refreshing...' : '🔄 Refresh'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── 5 KPI Cards ── */}
