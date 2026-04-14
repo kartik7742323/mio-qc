@@ -8,17 +8,39 @@ class SheetsService {
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+
+    // Cache for master data (5 minute TTL)
+    this.masterDataCache = null;
+    this.masterDataCacheTime = 0;
+
+    // Cache for clients list (5 minute TTL)
+    this.clientsCache = null;
+    this.clientsCacheTime = 0;
+
+    this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   }
 
   async getAllClients() {
     try {
+      // Return cached clients if still valid
+      const now = Date.now();
+      if (this.clientsCache && (now - this.clientsCacheTime) < this.CACHE_TTL) {
+        return this.clientsCache;
+      }
+
       const spreadsheet = await this.sheets.spreadsheets.get({
         spreadsheetId: config.SPREADSHEET_ID,
       });
 
-      return spreadsheet.data.sheets
+      const clients = spreadsheet.data.sheets
         .filter((s) => !config.EXCLUDE_SHEETS.includes(s.properties.title))
         .map((s) => s.properties.title);
+
+      // Cache the result
+      this.clientsCache = clients;
+      this.clientsCacheTime = now;
+
+      return clients;
     } catch (error) {
       console.error('Error fetching clients:', error);
       throw error;
@@ -27,6 +49,12 @@ class SheetsService {
 
   async getMasterData() {
     try {
+      // Return cached data if still valid
+      const now = Date.now();
+      if (this.masterDataCache && (now - this.masterDataCacheTime) < this.CACHE_TTL) {
+        return this.masterDataCache;
+      }
+
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.SPREADSHEET_ID,
         range: 'Sheet2!A:Z',
@@ -48,6 +76,10 @@ class SheetsService {
           }
         }
       });
+
+      // Cache the result
+      this.masterDataCache = masterData;
+      this.masterDataCacheTime = now;
 
       return masterData;
     } catch (error) {
