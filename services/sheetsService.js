@@ -57,7 +57,7 @@ class SheetsService {
 
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.SPREADSHEET_ID,
-        range: "Master!A1:L500",
+        range: "Master",
       });
 
       const values = response.data.values || [];
