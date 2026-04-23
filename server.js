@@ -76,10 +76,17 @@ async function initializeServer() {
     console.log('✅ Database initialized');
   } catch (error) {
     console.error('❌ Failed to initialize database:', error);
-    process.exit(1);
   }
 }
-initializeServer();
+
+// Store the promise so every request can await it before touching the DB
+const dbReady = initializeServer();
+
+// Ensure DB is initialized before any API request proceeds (critical for Vercel cold starts)
+app.use('/api', async (req, res, next) => {
+  await dbReady;
+  next();
+});
 
 // Get all clients
 app.get('/api/clients', requireAuth, async (req, res) => {
