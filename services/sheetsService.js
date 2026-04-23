@@ -17,6 +17,10 @@ class SheetsService {
     this.clientsCache = null;
     this.clientsCacheTime = 0;
 
+    // Cache for per-client sheet data (5 minute TTL)
+    this.clientDataCache = {};
+    this.clientDataCacheTime = {};
+
     this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   }
 
@@ -111,6 +115,11 @@ class SheetsService {
 
   async getClientData(clientName) {
     try {
+      const now = Date.now();
+      if (this.clientDataCache[clientName] && (now - this.clientDataCacheTime[clientName]) < this.CACHE_TTL) {
+        return this.clientDataCache[clientName];
+      }
+
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: config.SPREADSHEET_ID,
         range: `'${clientName}'!A:L`,
@@ -149,6 +158,8 @@ class SheetsService {
         });
       }
 
+      this.clientDataCache[clientName] = data;
+      this.clientDataCacheTime[clientName] = Date.now();
       return data;
     } catch (error) {
       console.error(`Error fetching data for ${clientName}:`, error);

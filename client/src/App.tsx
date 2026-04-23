@@ -285,11 +285,16 @@ function CallsTable({ category, issueType, clientFilter, onBack, onBackAll }: {
     const key = `${call.executionId}|${call.client}`;
     setUpdating(prev => new Set([...prev, key]));
     const next: 'open' | 'resolved' = call.status === 'open' ? 'resolved' : 'open';
-    await api.updateStatus(call.executionId, call.client, call.category, call.type, next);
-    setCalls(prev =>
-      prev.map(c => c.executionId === call.executionId && c.client === call.client ? { ...c, status: next } : c)
-    );
-    setUpdating(prev => { const s = new Set(prev); s.delete(key); return s; });
+    try {
+      await api.updateStatus(call.executionId, call.client, call.category, call.type, next);
+      setCalls(prev =>
+        prev.map(c => c.executionId === call.executionId && c.client === call.client ? { ...c, status: next } : c)
+      );
+    } catch (err) {
+      alert('Failed to save — please try again.');
+    } finally {
+      setUpdating(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
   };
 
   const openCount     = calls.filter(c => c.status === 'open').length;

@@ -30,6 +30,5 @@ module.exports = {
     typeIdx:             7,
   },
 
-  // On Vercel, filesystem is read-only except /tmp
-  DB_PATH: process.env.VERCEL ? '/tmp/qc_issues.db' : './qc_issues.db',
+  DATABASE_URL: process.env.DATABASE_URL || null,
 };

@@ -1,134 +1,84 @@
-let sqlite3;
-try {
-  sqlite3 = require('sqlite3').verbose();
-} catch (e) {
-  sqlite3 = null;
-}
-
-const path = require('path');
+const { Pool } = require('pg');
 const config = require('../config');
 
 class DatabaseService {
   constructor() {
-    this.db = null;
+    this.pool = null;
     this.available = false;
   }
 
   async init() {
-    // On Vercel, sqlite3 native module fails. Gracefully skip.
-    if (!sqlite3) {
-      console.log('⚠️  SQLite3 not available (serverless environment) — status tracking disabled');
-      this.available = false;
-      return Promise.resolve();
+    if (!config.DATABASE_URL) {
+      console.log('⚠️  DATABASE_URL not set — status tracking disabled');
+      return;
     }
 
-    return new Promise((resolve, reject) => {
-      this.db = new sqlite3.Database(config.DB_PATH, (err) => {
-        if (err) {
-          console.warn('⚠️  Database initialization failed:', err.message);
-          this.available = false;
-          resolve(); // Don't fail the whole app
-        } else {
-          this.createTables()
-            .then(() => { this.available = true; resolve(); })
-            .catch(err => { console.warn('⚠️  Table creation failed:', err); resolve(); });
-        }
-      });
+    this.pool = new Pool({
+      connectionString: config.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
     });
+
+    try {
+      await this.createTables();
+      this.available = true;
+      console.log('✅ PostgreSQL connected');
+    } catch (err) {
+      console.warn('⚠️  Database init failed:', err.message);
+      this.pool = null;
+    }
   }
 
   async createTables() {
-    return new Promise((resolve, reject) => {
-      this.db.serialize(() => {
-        // Table to store issue status (resolved/unresolved)
-        this.db.run(
-          `CREATE TABLE IF NOT EXISTS issue_status (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            execution_id TEXT NOT NULL,
-            client TEXT NOT NULL,
-            category TEXT NOT NULL,
-            type TEXT NOT NULL,
-            status TEXT DEFAULT 'open',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(execution_id, category, type)
-          )`,
-          (err) => {
-            if (err) reject(err);
-            else resolve();
-          }
-        );
-      });
-    });
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS issue_status (
+        id SERIAL PRIMARY KEY,
+        execution_id TEXT NOT NULL,
+        client TEXT NOT NULL,
+        category TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(execution_id, category, type)
+      )
+    `);
   }
 
   async updateIssueStatus(executionId, client, category, type, status) {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        resolve({ id: null });
-        return;
-      }
-      this.db.run(
-        `INSERT INTO issue_status (execution_id, client, category, type, status)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(execution_id, category, type) DO UPDATE SET
-         status = excluded.status,
-         updated_at = CURRENT_TIMESTAMP`,
-        [executionId, client, category, type, status],
-        function (err) {
-          if (err) reject(err);
-          else resolve({ id: this.lastID });
-        }
-      );
-    });
+    if (!this.pool) return { id: null };
+    const result = await this.pool.query(
+      `INSERT INTO issue_status (execution_id, client, category, type, status)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT(execution_id, category, type) DO UPDATE SET
+         status = EXCLUDED.status,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING id`,
+      [executionId, client, category, type, status]
+    );
+    return { id: result.rows[0]?.id };
   }
 
   async getIssueStatus(executionId, client, category, type) {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        resolve('open');
-        return;
-      }
-      this.db.get(
-        `SELECT status FROM issue_status
-         WHERE execution_id = ? AND client = ? AND category = ? AND type = ?`,
-        [executionId, client, category, type],
-        (err, row) => {
-          if (err) reject(err);
-          else resolve(row?.status || 'open');
-        }
-      );
-    });
+    if (!this.pool) return 'open';
+    const result = await this.pool.query(
+      `SELECT status FROM issue_status
+       WHERE execution_id = $1 AND client = $2 AND category = $3 AND type = $4`,
+      [executionId, client, category, type]
+    );
+    return result.rows[0]?.status || 'open';
   }
 
   async getAllIssueStatuses(client) {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        resolve([]);
-        return;
-      }
-      this.db.all(
-        `SELECT execution_id, category, type, status FROM issue_status WHERE client = ?`,
-        [client],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    if (!this.pool) return [];
+    const result = await this.pool.query(
+      `SELECT execution_id, category, type, status FROM issue_status WHERE client = $1`,
+      [client]
+    );
+    return result.rows;
   }
 
-  close() {
-    return new Promise((resolve, reject) => {
-      if (this.db) {
-        this.db.close((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
+  async close() {
+    if (this.pool) await this.pool.end();
   }
 }
 

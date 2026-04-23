@@ -62,10 +62,11 @@ export const api = {
     executionId: string, client: string, category: string,
     type: string, status: 'open' | 'resolved'
   ): Promise<void> {
-    await fetch(`${BASE}/issue-status`, {
+    const r = await fetch(`${BASE}/issue-status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: JSON.stringify({ executionId, client, category, type, status }),
     });
+    if (!r.ok) throw new Error(`Failed to save status: ${r.status}`);
   },
 };
